@@ -1,4 +1,4 @@
-CPP = g++ -std=c++11 -O3
+CPP = g++ -std=c++0x -O3
 INCLUDE = -I../include 
 LIBS = -lpthread 
 #CFLAGS += -rdynamic

@@ -32,7 +32,7 @@ public:
 	}
 
 protected:
-	int fd_ = -1;
+	int fd_;
 };
 
 class ClientSocket: public Socket {

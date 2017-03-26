@@ -11,6 +11,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <string.h>
 #include "net.h"
 #include "log.h"
 
