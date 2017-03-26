@@ -17,7 +17,7 @@
 
 namespace httpserver {
 static char* LOGFILE = nullptr;
-#define LOG_LEVEL LOG_WARNING
+#define LOG_LEVEL LOG_DEBUG
 
 void _LogRaw(int level, const char* msg) {
     const char *c = ".-*#";

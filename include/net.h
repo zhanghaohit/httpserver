@@ -21,7 +21,7 @@ namespace httpserver {
 class Socket {
 public:
 	Socket (int fd = -1): fd_(fd) {};
-	~Socket () { close(fd_); }
+	~Socket () { if (fd_ > 0) close(fd_); }
 
 	inline int GetFD () {
 		return fd_;

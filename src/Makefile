@@ -6,8 +6,8 @@ LIBS = -lpthread
 all: server client 
 build: server client 
 
-SRC = log.cc net.cc
-OBJ = log.o net.o
+SRC = log.cc net.cc event.cc
+OBJ = log.o net.o event.o
 
 $(OBJ): %.o : %.cc
 	$(CPP) $< $(CFLAGS) $(INCLUDE) -g -c -o $@ 

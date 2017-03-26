@@ -1,2 +1,1 @@
-# httpserver
-a simple http server
+simple httpserver
