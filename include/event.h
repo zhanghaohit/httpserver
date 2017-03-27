@@ -20,16 +20,12 @@ namespace httpserver {
 
 #define AE_NOMORE -1
 
-/* Macros */
-#define AE_NOTUSED(V) ((void) V)
-
 struct aeEventLoop;
 
 /* Types and data structures */
 typedef void aeFileProc(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
 typedef int aeTimeProc(struct aeEventLoop *eventLoop, long long id, void *clientData);
 typedef void aeEventFinalizerProc(struct aeEventLoop *eventLoop, void *clientData);
-typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 
 /* File event structure */
 struct aeFileEvent {
@@ -56,8 +52,38 @@ struct aeFiredEvent {
     int mask;
 };
 
+struct aeApiState {
+    int epfd;
+    struct epoll_event *events;
+};
 
-struct aeEventLoop {
+class aeEventLoop {
+public:
+	aeEventLoop(int setsize);
+	~aeEventLoop();
+
+	void startEventLoop();
+	void aeStop();
+
+	int aeCreateFileEvent(int fd, int mask,
+	        aeFileProc *proc, void *clientData);
+	void aeDeleteFileEvent(int fd, int mask);
+	int aeGetFileEvents(int fd);
+	long long aeCreateTimeEvent(long long milliseconds,
+	        aeTimeProc *proc, void *clientData,
+	        aeEventFinalizerProc *finalizerProc);
+	int aeDeleteTimeEvent(long long id);
+
+private:
+	int aeResizeSetSize(int setsize);
+
+	int aeProcessEvents(int flags);
+	int processTimeEvents();
+	aeTimeEvent* aeSearchNearestTimer();
+	int aeApiAddEvent(int fd, int mask);
+	void aeApiDelEvent(int fd, int delmask);
+	int aeApiPoll(struct timeval *tvp);
+
     int maxfd;   /* highest file descriptor currently registered */
     int setsize; /* max number of file descriptors tracked */
     long long timeEventNextId;
@@ -67,29 +93,7 @@ struct aeEventLoop {
     aeTimeEvent *timeEventHead;
     int stop;
     void *apidata; /* This is used for polling API specific data */
-    aeBeforeSleepProc *beforesleep;
 };
-
-/* Prototypes */
-aeEventLoop *aeCreateEventLoop(int setsize);
-void aeDeleteEventLoop(aeEventLoop *eventLoop);
-void aeStop(aeEventLoop *eventLoop);
-int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
-        aeFileProc *proc, void *clientData);
-void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask);
-int aeGetFileEvents(aeEventLoop *eventLoop, int fd);
-long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
-        aeTimeProc *proc, void *clientData,
-        aeEventFinalizerProc *finalizerProc);
-int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id);
-int aeProcessEvents(aeEventLoop *eventLoop, int flags);
-int aeWait(int fd, int mask, long long milliseconds);
-void aeMain(aeEventLoop *eventLoop);
-char *aeGetApiName(void);
-void aeSetBeforeSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *beforesleep);
-int aeGetSetSize(aeEventLoop *eventLoop);
-int aeResizeSetSize(aeEventLoop *eventLoop, int setsize);
-void startEventLoop(aeEventLoop *el);
 }
 
 #endif
