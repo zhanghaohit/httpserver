@@ -9,53 +9,54 @@
 #include "net.h"
 #include "event.h"
 #include "log.h"
+#include "http_request.h"
+#include "server.h"
 
 using namespace httpserver;
 using std::string;
 using std::cout;
 using std::endl;
 
-aeEventLoop* el;
+namespace httpserver {
 
-void ProcessTcpClientHandle (aeEventLoop *el, int fd, void *data, int mask) {
+void ProcessTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	ClientSocket* cs = static_cast<ClientSocket*>(data);
-	LOG(LOG_WARNING, "client socket = %d", cs->GetFD());
-	string r = cs->Recv();
-	if (r.length() == 0) {
-		LOG(LOG_WARNING, "remote client has close the socket");
-		el->aeDeleteFileEvent(cs->GetFD(), AE_READABLE);
-		delete cs;
+	LOG(LOG_WARNING, "Process client = %d", cs->GetFD());
+
+	HttpRequest request;
+	int status = request.ReadAndParse(cs);
+	if (status == ST_CLOSED) {
+	  delete cs;
+	  el->DeleteFileEvent(fd, AE_READABLE);
 	} else {
-		LOG(LOG_WARNING, "received = %s", r.c_str());
-		string to_send = "hello from server";
-		assert(to_send.length() == cs->Send(to_send.c_str(), to_send.length()));
+	  request.Respond(cs);
+	  if (!request.KeepAlive()) {
+	    LOG(LOG_WARNING, "not keep alive, delete socket");
+	    delete cs;
+	    el->DeleteFileEvent(fd, AE_READABLE);
+	  }
 	}
 }
 
-void AcceptTcpClientHandle (aeEventLoop *el, int fd, void *data, int mask) {
+void AcceptTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	ServerSocket* ss = static_cast<ServerSocket*>(data);
 	ClientSocket* cs = ss->Accept();
 
-	if (el->aeCreateFileEvent(cs->GetFD(), AE_READABLE, ProcessTcpClientHandle, cs) == AE_ERROR) {
+	LOG(LOG_WARNING, "Accept client = %d", cs->GetFD());
+
+	if (el->CreateFileEvent(cs->GetFD(), AE_READABLE, ProcessTcpClientHandle, cs) == ST_ERROR) {
 		LOG (LOG_FATAL, "cannot create file event");
 		return;
 	}
 }
 
-int main () {
-	std::cout << "hello server" << std::endl;
+HttpServer::HttpServer(int port, const char* bind_addr, int backlog)
+    : ss_(port, bind_addr, backlog), el_(MAX_FD) {
 
-	ServerSocket ss (12345);
-	aeEventLoop el(1024);
-
-	if (el.aeCreateFileEvent(ss.GetFD(), AE_READABLE, AcceptTcpClientHandle, &ss) == AE_ERROR) {
-		LOG (LOG_FATAL, "cannot create file event");
-		return -1;
-	}
-
-	el.startEventLoop ();
-
-	return 0;
+  if (el_.CreateFileEvent(ss_.GetFD(), AE_READABLE, AcceptTcpClientHandle, &ss_) == ST_ERROR) {
+    LOG(LOG_FATAL, "cannot create file event");
+    return;
+  }
 }
-
+} //end of namespace
 

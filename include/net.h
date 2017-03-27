@@ -9,25 +9,39 @@
 #define INCLUDE_NET_H_
 
 #include <string>
+#include <iostream>
+#include <sstream>
 #include <sys/socket.h>
+#include <unistd.h>
+#include "event.h"
 
 using std::string;
+using std::stringstream;
 
 namespace httpserver {
 
 #define TCP_BACKLOG 511
+#define DEFAULT_RECV_SIZE 2048
+
+#define ST_SUCCESS 0
+#define ST_ERROR -1
+#define ST_CLOSED 1
 
 
 class Socket {
 public:
 	Socket (int fd = -1): fd_(fd) {};
-	~Socket () { if (fd_ > 0) close(fd_); }
+	~Socket () {
+	  if (fd_ > 0) {
+	    close(fd_);
+	  }
+	}
 
-	inline int GetFD () {
+	inline int GetFD() const noexcept {
 		return fd_;
 	}
 
-	inline void SetFD (int fd) {
+	inline void SetFD (int fd) noexcept {
 		fd_ = fd;
 	}
 
@@ -42,7 +56,9 @@ public:
 		Socket (fd), ip_(ip), port_(port) {};
 
 	int Send (const char* buf, int size);
-	string Recv ();
+	int Recv (char* buf, int size = DEFAULT_RECV_SIZE);
+	string Recv (int size = DEFAULT_RECV_SIZE);
+	int Recv (stringstream& ss, int size = DEFAULT_RECV_SIZE);
 
 private:
 	string ip_;
@@ -51,7 +67,7 @@ private:
 
 class ServerSocket: public Socket {
 public:
-	ServerSocket (int port, const char* bind_addr = nullptr, int backlog = TCP_BACKLOG);
+	explicit ServerSocket (int port, const char* bind_addr = nullptr, int backlog = TCP_BACKLOG);
 
 	ClientSocket* Accept ();
 private:

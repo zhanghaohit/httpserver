@@ -6,13 +6,13 @@ LIBS = -lpthread
 all: server client 
 build: server client 
 
-SRC = log.cc net.cc event.cc
-OBJ = log.o net.o event.o
+SRC = log.cc net.cc event.cc http_request.cc server.cc
+OBJ = log.o net.o event.o http_request.o server.o
 
 $(OBJ): %.o : %.cc
 	$(CPP) $< $(CFLAGS) $(INCLUDE) -g -c -o $@ 
 
-server: server.cc $(OBJ)
+server: main.cc $(OBJ)
 	$(CPP) $(CFLAGS) $(INCLUDE) -g -o $@ $^ $(LIBS)		
 
 client: client.cc $(OBJ)

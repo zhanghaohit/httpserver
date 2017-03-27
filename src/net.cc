@@ -151,25 +151,32 @@ int ClientSocket::Send(const char* buf, int size) {
 		totlen += nwritten;
 		buf += nwritten;
 	}
-
 	LOG(LOG_DEBUG, "send %s (%d)", copy, size);
-
 	return totlen;
 }
 
-string ClientSocket::Recv() {
-	int nread;
-	int count = 2048;
-	char buf[count];
+int ClientSocket::Recv(char* buf, int size) {
+  int nread = read(fd_, buf, size);
+  if (nread == 0) {
+    LOG(LOG_WARNING, "socket has been closed");
+  }
+  if (nread == -1) {
+    LOG(LOG_FATAL, "read socket %d failed: %s (%d)", fd_, strerror(errno), errno);
+  }
+  return nread;
+}
 
-	nread = read(fd_, buf, count);
-	if (nread == 0) {
-		LOG(LOG_WARNING, "socket has been closed");
-	}
-	if (nread == -1) {
-		LOG(LOG_FATAL, "read socket %d failed: %s (%d)", fd_, strerror(errno), errno);
-	}
-	return string(buf, nread);
+string ClientSocket::Recv(int size) {
+	char buf[size];
+	int nread = Recv(buf, size);
+	return nread > 0 ? string(buf, nread) : string();
+}
+
+int ClientSocket::Recv(stringstream& ss, int size) {
+  char buf[size];
+  int nread = Recv(buf, size);
+  ss.write(buf, nread);
+  return nread;
 }
 } //end namespace
 
