@@ -139,23 +139,24 @@ ClientSocket::ClientSocket(const string& ip, int port) :
 	end: freeaddrinfo(servinfo);
 }
 
-int ClientSocket::Send(const char* buf, int size) {
+int ClientSocket::Send(const void* buf, int size) {
 	int nwritten, totlen = 0;
-	const char* copy = buf;
+	const char* p = static_cast<const char*>(buf);
+	const char* copy = static_cast<const char*>(buf);
 	while (totlen != size) {
-		nwritten = write(fd_, buf, size - totlen);
+		nwritten = write(fd_, p, size - totlen);
 		if (nwritten == 0)
 			return totlen;
 		if (nwritten == -1)
 			return -1;
 		totlen += nwritten;
-		buf += nwritten;
+		p += nwritten;
 	}
 	LOG(LOG_DEBUG, "send %s (%d)", copy, size);
 	return totlen;
 }
 
-int ClientSocket::Recv(char* buf, int size) {
+int ClientSocket::Recv(void* buf, int size) {
   int nread = read(fd_, buf, size);
   if (nread == 0) {
     LOG(LOG_WARNING, "socket has been closed");

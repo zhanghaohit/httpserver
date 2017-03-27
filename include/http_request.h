@@ -34,7 +34,6 @@ class HttpRequest {
   string http_version_;
 
   bool keep_alive_ = false;
-  unordered_map<string, string> params_;
   unordered_map<string, string> headers_;
 
   /* status_: used to transmit server's error status, such as

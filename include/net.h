@@ -55,8 +55,8 @@ public:
 	ClientSocket (const string& ip, int port, int fd):
 		Socket (fd), ip_(ip), port_(port) {};
 
-	int Send (const char* buf, int size);
-	int Recv (char* buf, int size = DEFAULT_RECV_SIZE);
+	int Send (const void* buf, int size);
+	int Recv (void* buf, int size = DEFAULT_RECV_SIZE);
 	string Recv (int size = DEFAULT_RECV_SIZE);
 	int Recv (stringstream& ss, int size = DEFAULT_RECV_SIZE);
 
