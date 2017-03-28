@@ -19,6 +19,19 @@ using std::unordered_map;
 
 namespace httpserver {
 
+#define MAX_HEADER_SIZE 512
+#define MAX_FILE_SIZE 2048
+#define MAX_SIZE_BITS 4
+
+const string kContentLen = "Content-Length: ";
+const string kHttpVersion = "HTTP/1.1 ";
+const string kConnection = "Connection: ";
+const string kOk = "202 OK\n";
+const string kNotFound = "404 Not Found\n";
+//const string kKeepAlive = "Connection: keep-alive\n";
+//const string kClosed = "Connection: closed\n";
+const string kOtherHeaders = "Connection: keep-alive\nContent-Type: text/html\nServer: Simple Http Server\n";
+
 class HttpRequest {
  public:
   HttpRequest() {}
@@ -37,10 +50,10 @@ class HttpRequest {
   unordered_map<string, string> headers_;
 
   /* status_: used to transmit server's error status, such as
-   o  202 OK
-   o  404 Not Found
-   and so on */
-  string status_ = "200 OK";
+     202 OK
+     404 Not Found
+     and so on */
+  string status_ = kOk;
 };
 }  //end of namespace
 

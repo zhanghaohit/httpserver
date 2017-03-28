@@ -10,6 +10,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <ctime>
 
 using std::string;
 using std::unordered_map;
@@ -39,14 +40,14 @@ class HttpResource {
   int Get (const string& path, void* buf, int size);
   string Get (const string& path);
 
-  HttpResource() = delete;
   HttpResource(const HttpResource&) = delete;
   void operator=(const HttpResource&) = delete;
 
  private:
+  HttpResource() {};
   static HttpResource* resource_;
-  string root_;
-  unordered_map<string, string> caches_;
+  string root_ = ".";
+  unordered_map<string, std::pair<timespec, string>> caches_;
 };
 } //end of namespace
 

@@ -23,7 +23,7 @@ using std::atomic;
 #define SOCKETS_PER_THREAD 100
 #define DEFAULT_PORT 12345
 
-string to_send = "GET / HTTP/1.1\n"
+string to_send = "GET /index.html HTTP/1.1\n"
   "Host: localhost:12345\n"
     "User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:44.0) Gecko/20100101 Firefox/44.0\n"
     "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\n"
@@ -33,16 +33,23 @@ string to_send = "GET / HTTP/1.1\n"
 
 atomic<unsigned long> sent (0);
 atomic<unsigned long> recved (0);
+int num_requests = 100000;
 
 void request(EventLoop *el, int fd, void *data, int mask) {
   ClientSocket* cs = static_cast<ClientSocket*>(data);
   string r = cs->Recv(1024);
   recved++;
+  unsigned long rc = recved;
+//  if (rc > num_requests) {
+//    el->Stop();
+//  }
   if (r.size() == 0) {
     LOG(LOG_WARNING, "received from server failed");
     return;
   }
-  //LOG(LOG_WARNING, "Received = %s", r.c_str());
+  //LOG(LOG_WARNING, "Received = %s, size = %d", r.c_str(), r.size());
+  unsigned long s = sent;
+  sleep(1);
   if(to_send.length() != cs->Send(to_send.c_str(), to_send.length())) {
     LOG(LOG_WARNING, "request failed");
   }
@@ -81,6 +88,8 @@ int main (int argc, char* argv[]) {
       ip = argv[++i];
     } else if (strcmp(argv[i], "--sockets") == 0) {
       num_sockets = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--requests") == 0) {
+      num_requests = atoi(argv[++i]);
     } else {
       fprintf(stderr, "Unrecognized option %s for benchmark\n", argv[i]);
     }

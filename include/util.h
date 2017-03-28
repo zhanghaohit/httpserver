@@ -29,6 +29,14 @@ inline int GetRandom(int min, int max, unsigned int* seedp) {
   int ret = (rand_r(seedp) % (max - min)) + min;
   return ret;
 }
+
+inline bool operator <(const timespec& lhs, const timespec& rhs) {
+    if (lhs.tv_sec == rhs.tv_sec) {
+        return lhs.tv_nsec < rhs.tv_nsec;
+    } else {
+        return lhs.tv_sec < rhs.tv_sec;
+    }
+}
 } //end of namespace
 
 #endif /* INCLUDE_UTIL_H_ */

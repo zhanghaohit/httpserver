@@ -8,6 +8,7 @@
 #include <cstring>
 #include "server.h"
 #include "log.h"
+#include "resource.h"
 using namespace httpserver;
 
 #define DEFAULT_PORT 12345
@@ -26,6 +27,7 @@ int main (int argc, char* argv[]) {
 
   LOG(LOG_WARNING, "port: %d", port);
 
+  HttpResource::Instance()->SetRootDir("./");
 
   HttpServer server (port);
   if (server.Start() != ST_SUCCESS) {

@@ -6,8 +6,10 @@
  */
 
 #include <algorithm>
+#include <string.h>
 #include "http_request.h"
 #include "log.h"
+#include "resource.h"
 
 using std::cout;
 using std::endl;
@@ -75,24 +77,47 @@ int HttpRequest::ReadAndParse (ClientSocket* socket) {
 
 int HttpRequest::Respond (ClientSocket* socket) {
   stringstream ss;
-  string reply = "<html><body><h1>Hello, World!</h1></body></html>";
+  //string reply = "<html><body><h1>Hello, World!</h1></body></html>";
+  char header[MAX_HEADER_SIZE];
+  char* buf = static_cast<char*>(malloc(MAX_FILE_SIZE));
+  int pos = 0;
 
-  ss << "HTTP/1.1 " << status_ + "\n";
-  ss << "Server: Simple Http Server\nContent-Type: text/html\n";
-  if (headers_.count("connection")) {
-    ss << "Connection: " << headers_["connection"] << "\n";
+  int size = HttpResource::Instance()->Get(uri_, buf, MAX_FILE_SIZE);;
+  if (size == 0) {  //read file failed
+    status_ = kNotFound;
+  } else if (size > MAX_FILE_SIZE) { //file is larger than the buffer
+    LOG(LOG_WARNING, "found a big file with size %d", size);
+    buf = static_cast<char*>(realloc(buf, size));
+    size = HttpResource::Instance()->Get(uri_, buf, size);
   }
-  ss << "Content-Length: ";
-  ss << reply.length();
-  ss << "\n\n";
-  ss << reply;
 
-  int length = ss.str().length();
-  if (ss.str().length() == socket->Send(ss.str().c_str(), length)) {
-    return ST_SUCCESS;
-  } else {
+  memcpy(header+pos, kHttpVersion.c_str(), kHttpVersion.length());
+  pos += kHttpVersion.length();
+
+  memcpy(header+pos, status_.c_str(), status_.length());
+  pos += status_.length();
+
+  memcpy(header+pos, kOtherHeaders.c_str(), kOtherHeaders.length());
+  pos += kOtherHeaders.length();
+
+  memcpy(header+pos, kContentLen.c_str(), kContentLen.length());
+  pos += kContentLen.length();
+  pos += sprintf(header+pos, "%d\n\n", size);
+
+  if (pos != socket->Send(header, pos)) {
+    free(buf);
     return ST_ERROR;
   }
+
+  if (size > 0) {
+    if (size != socket->Send(buf, size)) {
+      free(buf);
+      return ST_ERROR;
+    }
+  }
+
+  free(buf);
+  return ST_SUCCESS;
 }
 
 } //end of namespace
