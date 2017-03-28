@@ -21,7 +21,7 @@ namespace httpserver {
 
 void ProcessTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	ClientSocket* cs = static_cast<ClientSocket*>(data);
-	LOG(LOG_WARNING, "Process client = %d", cs->GetFD());
+	//LOG(LOG_WARNING, "Process client = %d", cs->GetFD());
 
 	HttpRequest request;
 	int status = request.ReadAndParse(cs);

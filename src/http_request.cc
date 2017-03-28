@@ -17,7 +17,7 @@ namespace httpserver {
 int HttpRequest::ReadAndParse (ClientSocket* socket) {
   stringstream ss;
   int nread = socket->Recv(ss);
-  if (nread == 0) { //remote has close the socket
+  if (nread <= 0) { //remote has close the socket
     return ST_CLOSED;
   }
 
@@ -64,7 +64,7 @@ int HttpRequest::ReadAndParse (ClientSocket* socket) {
     }
   }
 
-  LOG(LOG_WARNING, "method = %s, uri = %s, http_version = %s", method_.c_str(), uri_.c_str(), http_version_.c_str());
+  //LOG(LOG_WARNING, "method = %s, uri = %s, http_version = %s", method_.c_str(), uri_.c_str(), http_version_.c_str());
 //  for (auto& it: headers_) {
 //    LOG(LOG_WARNING, "%s: %s", it.first.c_str(), it.second.c_str());
 //  }

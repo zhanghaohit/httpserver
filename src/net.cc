@@ -117,6 +117,7 @@ ClientSocket::ClientSocket(const string& ip, int port) :
 		if (connect(fd_, p->ai_addr, p->ai_addrlen) == -1) {
 			/* If the socket is non-blocking, it is ok for connect() to
 			 * return an EINPROGRESS error here. */
+			LOG(LOG_WARNING, "failed to connect");
 			if (errno == EINPROGRESS)
 				goto end;
 			close(fd_);
