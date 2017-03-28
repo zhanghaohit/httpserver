@@ -27,13 +27,13 @@ void ProcessTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	int status = request.ReadAndParse(cs);
 	if (status == ST_CLOSED) {
 	  delete cs;
-	  el->DeleteFileEvent(fd, AE_READABLE);
+	  el->DeleteFileEvent(fd, READABLE);
 	} else {
 	  request.Respond(cs);
 	  if (!request.KeepAlive()) {
 	    LOG(LOG_WARNING, "not keep alive, delete socket");
 	    delete cs;
-	    el->DeleteFileEvent(fd, AE_READABLE);
+	    el->DeleteFileEvent(fd, READABLE);
 	  }
 	}
 }
@@ -42,21 +42,30 @@ void AcceptTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	ServerSocket* ss = static_cast<ServerSocket*>(data);
 	ClientSocket* cs = ss->Accept();
 
+	if (!cs) {
+	  LOG(LOG_FATAL, "cannot accept client");
+	  return;
+	}
+
 	LOG(LOG_WARNING, "Accept client = %d", cs->GetFD());
 
-	if (el->CreateFileEvent(cs->GetFD(), AE_READABLE, ProcessTcpClientHandle, cs) == ST_ERROR) {
+	if (el->CreateFileEvent(cs->GetFD(), READABLE, ProcessTcpClientHandle, cs) == ST_ERROR) {
 		LOG (LOG_FATAL, "cannot create file event");
 		return;
 	}
 }
 
-HttpServer::HttpServer(int port, const char* bind_addr, int backlog)
-    : ss_(port, bind_addr, backlog), el_(MAX_FD) {
-
-  if (el_.CreateFileEvent(ss_.GetFD(), AE_READABLE, AcceptTcpClientHandle, &ss_) == ST_ERROR) {
-    LOG(LOG_FATAL, "cannot create file event");
-    return;
-  }
-}
+HttpServer::HttpServer(int port, const string& bind_addr, int backlog)
+    : ss_(port, bind_addr, backlog), el_() {}
 } //end of namespace
 
+int HttpServer::Start() {
+  int st = ss_.Listen();
+
+  if (el_.CreateFileEvent(ss_.GetFD(), READABLE, AcceptTcpClientHandle, &ss_) == ST_ERROR) {
+    LOG(LOG_FATAL, "cannot create file event");
+    return ST_ERROR;
+  }
+  el_.Start();
+  return st;
+}

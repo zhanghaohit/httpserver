@@ -5,6 +5,7 @@
  *      Author: zhanghao
  */
 
+#include <cstring>
 #include "server.h"
 #include "log.h"
 using namespace httpserver;
@@ -13,15 +14,23 @@ using namespace httpserver;
 
 int main (int argc, char* argv[]) {
   int port = DEFAULT_PORT;
-  if (argc < 2) {
-    LOG(LOG_WARNING, "using default port: %d", port);
-  } else {
-    port = atoi(argv[1]);
-    LOG(LOG_WARNING, "using port: %d", port);
+
+  //the first argument should be the program name
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--port") == 0) {
+      port = atoi(argv[++i]);
+    } else {
+      fprintf(stderr, "Unrecognized option %s for benchmark\n", argv[i]);
+    }
   }
 
+  LOG(LOG_WARNING, "port: %d", port);
+
+
   HttpServer server (port);
-  server.Start();
+  if (server.Start() != ST_SUCCESS) {
+    LOG(LOG_WARNING, "start httpserver error");
+  }
   return 0;
 }
 

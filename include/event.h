@@ -2,23 +2,28 @@
 #define INCLUDE_AE_H_
 
 #include <time.h>
+#include <vector>
+
+using std::vector;
 
 namespace httpserver {
-#define AE_NONE 0
-#define AE_READABLE 1
-#define AE_WRITABLE 2
-#define AE_EDEGE 4
+#define NONE 0
+#define READABLE 1
+#define WRITABLE 2
+#define EDEGE 4
 
-#define AE_FILE_EVENTS 1
-#define AE_TIME_EVENTS 2
-#define AE_ALL_EVENTS (AE_FILE_EVENTS|AE_TIME_EVENTS)
-#define AE_DONT_WAIT 4
+#define FILE_EVENTS 1
+#define TIME_EVENTS 2
+#define ALL_EVENTS (FILE_EVENTS|TIME_EVENTS)
+#define DONT_WAIT 4
 
-#define AE_NOMORE -1
+#define NOMORE -1
+
+#define MAX_FD 1024
 
 struct EventLoop;
 
-/* Types and data structures */
+// Types and data structures
 typedef void FileProc(struct EventLoop *event_loop, int fd, void *client_data,
                         int mask);
 typedef int TimeProc(struct EventLoop *event_loop, long long id,
@@ -26,26 +31,26 @@ typedef int TimeProc(struct EventLoop *event_loop, long long id,
 typedef void EventFinalizerProc(struct EventLoop *event_loop,
                                   void *client_data);
 
-/* File event structure */
+// File event structure
 struct FileEvent {
-  int mask; /* one of AE_(READABLE|WRITABLE) */
+  int mask; // one of AE_(READABLE|WRITABLE)
   FileProc *rfile_proc;
   FileProc *wfile_proc;
   void *client_data;
 };
 
-/* Time event structure */
+// Time event structure
 struct TimeEvent {
-  long long id; /* time event identifier. */
-  long when_sec; /* seconds */
-  long when_ms; /* milliseconds */
+  long long id; // time event identifier
+  long when_sec; // seconds
+  long when_ms; // milliseconds
   TimeProc *time_proc;
   EventFinalizerProc *finalizer_proc;
   void *client_data;
   TimeEvent *next;
 };
 
-/* A fired event */
+// A fired event
 struct FiredEvent {
   int fd;
   int mask;
@@ -58,7 +63,7 @@ struct EpollState {
 
 class EventLoop {
  public:
-  EventLoop(int setsize);
+  EventLoop(int setsize = MAX_FD);
   ~EventLoop();
 
   void Start();
@@ -81,15 +86,15 @@ class EventLoop {
   void EpollDelEvent(int fd, int delmask);
   int EpollPoll(struct timeval *tvp);
 
-  int maxfd_; /* highest file descriptor currently registered */
-  int setsize_; /* max number of file descriptors tracked */
+  int maxfd_; // highest file descriptor currently registered
+  int setsize_; // max number of file descriptors tracked
   long long time_event_next_id_;
-  time_t last_time_; /* Used to detect system clock skew */
-  FileEvent *events_; /* Registered events */
-  FiredEvent *fired_; /* Fired events */
+  time_t last_time_; // Used to detect system clock skew
+  vector<FileEvent> events_; // Registered events
+  vector<FiredEvent> fired_; // Fired events
   TimeEvent *time_event_head_;
   int stop_;
-  void *apidata_; /* This is used for polling API specific data */
+  void *apidata_; // This is used for polling API specific data
 };
 }
 

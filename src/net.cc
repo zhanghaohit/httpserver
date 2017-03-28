@@ -16,46 +16,54 @@
 #include "log.h"
 
 namespace httpserver {
-ServerSocket::ServerSocket(int port, const char* bind_addr, int backlog) {
-	int rv;
-	char cport[6]; //max 65535
-	addrinfo hints, *servinfo, *p;
+ServerSocket::ServerSocket(int port, const string& bind_addr, int backlog)
+    : Socket(bind_addr, port), backlog_(backlog) {}
 
-	snprintf(cport, 6, "%d", port);
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE; // No effect if bindaddr != nullptr
+int ServerSocket::Listen() {
+  int rv;
+  char cport[6]; //max 65535
+  addrinfo hints, *servinfo, *p;
 
-	if ((rv = getaddrinfo(bind_addr, cport, &hints, &servinfo)) != 0) {
-		LOG(LOG_WARNING, "getaddrinfo failed: %s", gai_strerror(rv));
-		return;
-	}
+  snprintf(cport, 6, "%d", port_);
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_PASSIVE; // No effect if bindaddr != nullptr
 
-	for (p = servinfo; p != nullptr; p = p->ai_next) {
-		if ((fd_ = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-			continue;
+  if ((rv = getaddrinfo(ip_.size() == 0 ? nullptr : ip_.c_str(), cport, &hints, &servinfo)) != 0) {
+    LOG(LOG_WARNING, "getaddrinfo failed: %s", gai_strerror(rv));
+    return ST_ERROR;
+  }
 
-		if (bind(fd_, p->ai_addr, p->ai_addrlen) == -1) {
-			LOG(LOG_FATAL, "bind: %s", strerror(errno));
-			close (fd_);
-			goto error;
-		}
+  for (p = servinfo; p != nullptr; p = p->ai_next) {
+    if ((fd_ = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
+      continue;
 
-		if (listen(fd_, backlog) == -1) {
-			LOG(LOG_FATAL, "listen: %s", strerror(errno));
-			close (fd_);
-			goto error;
-		}
-		goto end;
-	}
-	if (p == nullptr) {
-		LOG(LOG_FATAL, "unable to bind socket");
-		goto error;
-	}
+    if (bind(fd_, p->ai_addr, p->ai_addrlen) == -1) {
+      LOG(LOG_FATAL, "bind: %s", strerror(errno));
+      close (fd_);
+      fd_ = -1;
+      freeaddrinfo(servinfo);
+      return ST_ERROR;
+    }
 
-	error: fd_ = -1;
-	end: freeaddrinfo(servinfo);
+    if (listen(fd_, backlog_) == -1) {
+      LOG(LOG_FATAL, "listen: %s", strerror(errno));
+      close (fd_);
+      fd_ = -1;
+      freeaddrinfo(servinfo);
+      return ST_ERROR;
+    }
+    freeaddrinfo(servinfo);
+    return ST_SUCCESS;
+  }
+  if (p == nullptr) {
+    LOG(LOG_FATAL, "unable to bind socket");
+  }
+
+  fd_ = -1;
+  freeaddrinfo(servinfo);
+  return ST_ERROR;
 }
 
 ClientSocket* ServerSocket::Accept() {
@@ -92,52 +100,55 @@ ClientSocket* ServerSocket::Accept() {
 	return new ClientSocket (string(cip), cport, cfd);
 }
 
-ClientSocket::ClientSocket(const string& ip, int port) :
-		ip_(ip), port_(port) {
-	int rv;
-	char portstr[6]; // strlen("65535") + 1;
-	addrinfo hints, *servinfo, *bservinfo, *p, *b;
+ClientSocket::ClientSocket(const string& ip, int port): Socket(ip, port) {}
 
-	snprintf(portstr, sizeof(portstr), "%d", port);
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
+int ClientSocket::Connect() {
+  int rv;
+  char portstr[6]; // strlen("65535") + 1;
+  addrinfo hints, *servinfo, *bservinfo, *p, *b;
 
-	if ((rv = getaddrinfo(ip.c_str(), portstr, &hints, &servinfo)) != 0) {
-		LOG(LOG_FATAL, "%s", gai_strerror(rv));
-		return;
-	}
-	for (p = servinfo; p != NULL; p = p->ai_next) {
-		/* Try to create the socket and to connect it.
-		 * If we fail in the socket() call, or on connect(), we retry with
-		 * the next entry in servinfo. */
-		if ((fd_ = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-			continue;
+  snprintf(portstr, sizeof(portstr), "%d", port_);
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
 
-		if (connect(fd_, p->ai_addr, p->ai_addrlen) == -1) {
-			/* If the socket is non-blocking, it is ok for connect() to
-			 * return an EINPROGRESS error here. */
-			LOG(LOG_WARNING, "failed to connect");
-			if (errno == EINPROGRESS)
-				goto end;
-			close(fd_);
-			fd_ = -1;
-			continue;
-		}
+  if ((rv = getaddrinfo(ip_.c_str(), portstr, &hints, &servinfo)) != 0) {
+    LOG(LOG_FATAL, "%s, %s (%d)", gai_strerror(rv), strerror(errno), errno);
+    return ST_ERROR;
+  }
+  for (p = servinfo; p != NULL; p = p->ai_next) {
+    /* Try to create the socket and to connect it.
+     * If we fail in the socket() call, or on connect(), we retry with
+     * the next entry in servinfo. */
+    if ((fd_ = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
+      continue;
 
-		/* If we ended an iteration of the for loop without errors, we
-		 * have a connected socket. Let's return to the caller. */
-		goto end;
-	}
-	if (p == nullptr)
-		LOG(LOG_WARNING, "creating socket: %s", strerror(errno));
+    if (connect(fd_, p->ai_addr, p->ai_addrlen) == -1) {
+      /* If the socket is non-blocking, it is ok for connect() to
+       * return an EINPROGRESS error here. */
+      LOG(LOG_WARNING, "failed to connect");
+      if (errno == EINPROGRESS) {
+        freeaddrinfo(servinfo);
+        return ST_INPROCESS;
+      }
+      close(fd_);
+      fd_ = -1;
+      continue;
+    }
 
-	error: if (fd_ != -1) {
-		close(fd_);
-		fd_ = -1;
-	}
+    /* If we ended an iteration of the for loop without errors, we
+     * have a connected socket. Let's return to the caller. */
+    freeaddrinfo(servinfo);
+    return ST_SUCCESS;
+  }
+  if (p == nullptr)
+    LOG(LOG_WARNING, "creating socket: %s", strerror(errno));
 
-	end: freeaddrinfo(servinfo);
+  if (fd_ != -1) {
+    close(fd_);
+    fd_ = -1;
+  }
+  return ST_ERROR;
 }
 
 int ClientSocket::Send(const void* buf, int size) {
@@ -160,7 +171,7 @@ int ClientSocket::Send(const void* buf, int size) {
 int ClientSocket::Recv(void* buf, int size) {
   int nread = read(fd_, buf, size);
   if (nread == 0) {
-    LOG(LOG_WARNING, "socket has been closed");
+    LOG(LOG_WARNING, "socket %d has been closed", fd_);
   }
   if (nread == -1) {
     LOG(LOG_FATAL, "read socket %d failed: %s (%d)", fd_, strerror(errno), errno);

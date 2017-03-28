@@ -42,15 +42,15 @@ int EventLoop::EpollAddEvent(int fd, int mask) {
   struct epoll_event ee;
   /* If the fd was already monitored for some event, we need a MOD
    * operation. Otherwise we need an ADD operation. */
-  int op = events_[fd].mask == AE_NONE ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
+  int op = events_[fd].mask == NONE ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
 
   ee.events = 0;
   mask |= events_[fd].mask; /* Merge old events */
-  if (mask & AE_READABLE)
+  if (mask & READABLE)
     ee.events |= EPOLLIN;
-  if (mask & AE_WRITABLE)
+  if (mask & WRITABLE)
     ee.events |= EPOLLOUT;
-  if (mask & AE_EDEGE)
+  if (mask & EDEGE)
     ee.events |= EPOLLET;
   ee.data.u64 = 0; /* avoid valgrind warning */
   ee.data.fd = fd;
@@ -65,13 +65,13 @@ void EventLoop::EpollDelEvent(int fd, int delmask) {
   int mask = events_[fd].mask & (~delmask);
 
   ee.events = 0;
-  if (mask & AE_READABLE)
+  if (mask & READABLE)
     ee.events |= EPOLLIN;
-  if (mask & AE_WRITABLE)
+  if (mask & WRITABLE)
     ee.events |= EPOLLOUT;
-  ee.data.u64 = 0; /* avoid valgrind warning */
+  ee.data.u64 = 0; // avoid valgrind warning
   ee.data.fd = fd;
-  if (mask != AE_NONE) {
+  if (mask != NONE) {
     epoll_ctl(state->epfd, EPOLL_CTL_MOD, fd, &ee);
   } else {
     /* Note, Kernel < 2.6.9 requires a non null event pointer even for
@@ -94,13 +94,13 @@ int EventLoop::EpollPoll(struct timeval *tvp) {
       int mask = 0;
       struct epoll_event *e = state->events + j;
       if (e->events & EPOLLIN)
-        mask |= AE_READABLE;
+        mask |= READABLE;
       if (e->events & EPOLLOUT)
-        mask |= AE_WRITABLE;
+        mask |= WRITABLE;
       if (e->events & EPOLLERR)
-        mask |= AE_WRITABLE;
+        mask |= WRITABLE;
       if (e->events & EPOLLHUP)
-        mask |= AE_WRITABLE;
+        mask |= WRITABLE;
       fired_[j].fd = e->data.fd;
       fired_[j].mask = mask;
     }
@@ -111,9 +111,9 @@ int EventLoop::EpollPoll(struct timeval *tvp) {
 EventLoop::EventLoop(int setsize) {
   int i;
 
-  this->events_ = (FileEvent *) malloc(sizeof(FileEvent) * setsize);
-  this->fired_ = (FiredEvent *) malloc(sizeof(FiredEvent) * setsize);
-  if (this->events_ == NULL || this->fired_ == NULL)
+  this->events_.resize(setsize);
+  this->fired_.resize(setsize);
+  if (this->events_.size() != setsize || this->fired_.size() != setsize)
     return;
   this->setsize_ = setsize;
   this->last_time_ = time(NULL);
@@ -121,10 +121,8 @@ EventLoop::EventLoop(int setsize) {
   this->time_event_next_id_ = 0;
   this->stop_ = 0;
   this->maxfd_ = -1;
-  /* Events with mask == AE_NONE are not set. So let's initialize the
-   * vector with it. */
   for (i = 0; i < setsize; i++)
-    this->events_[i].mask = AE_NONE;
+    this->events_[i].mask = NONE;
 
   EpollState *state = (EpollState*) malloc(sizeof(EpollState));
   if (!state)
@@ -144,13 +142,7 @@ EventLoop::EventLoop(int setsize) {
   this->apidata_ = state;
 }
 
-/* Resize the maximum set size of the event loop.
- * If the requested set size is smaller than the current set size, but
- * there is already a file descriptor in use that is >= the requested
- * set size minus one, AE_ERR is returned and the operation is not
- * performed at all.
- *
- * Otherwise AE_OK is returned and the operation is successful. */
+// Resize the maximum set size of the event loop
 int EventLoop::ResizeSetSize(int setsize) {
   int i;
 
@@ -163,16 +155,14 @@ int EventLoop::ResizeSetSize(int setsize) {
   state->events = (struct epoll_event*) realloc(
       state->events, sizeof(struct epoll_event) * setsize);
 
-  this->events_ = (FileEvent *) realloc(this->events_,
-                                         sizeof(FileEvent) * setsize);
-  this->fired_ = (FiredEvent *) realloc(this->fired_,
-                                         sizeof(FiredEvent) * setsize);
+  this->events_.resize(setsize);
+  this->fired_.resize(setsize);
+
   this->setsize_ = setsize;
 
-  /* Make sure that if we created new slots, they are initialized with
-   * an AE_NONE mask. */
+  //new slots are initialized with NONE mask
   for (i = this->maxfd_ + 1; i < setsize; i++)
-    this->events_[i].mask = AE_NONE;
+    this->events_[i].mask = NONE;
   return ST_SUCCESS;
 }
 
@@ -181,9 +171,6 @@ EventLoop::~EventLoop() {
   close(state->epfd);
   free(state->events);
   free(state);
-
-  free(this->events_);
-  free(this->fired_);
 }
 
 void EventLoop::Stop() {
@@ -193,7 +180,10 @@ void EventLoop::Stop() {
 int EventLoop::CreateFileEvent(int fd, int mask, FileProc *proc,
                                    void *client_data) {
   if (fd >= this->setsize_) {
-    ResizeSetSize(this->setsize_ * 2);
+    if(ResizeSetSize(this->setsize_ * 2) != ST_SUCCESS) {
+      LOG(LOG_WARNING, "cannot resize the event loop");
+      return ST_ERROR;
+    }
   }
 
   if (fd >= this->setsize_) {
@@ -205,9 +195,9 @@ int EventLoop::CreateFileEvent(int fd, int mask, FileProc *proc,
   if (EpollAddEvent(fd, mask) == -1)
     return ST_ERROR;
   fe->mask |= mask;
-  if (mask & AE_READABLE)
+  if (mask & READABLE)
     fe->rfile_proc = proc;
-  if (mask & AE_WRITABLE)
+  if (mask & WRITABLE)
     fe->wfile_proc = proc;
   fe->client_data = client_data;
   if (fd > this->maxfd_)
@@ -219,17 +209,17 @@ void EventLoop::DeleteFileEvent(int fd, int mask) {
   if (fd >= this->setsize_)
     return;
   FileEvent *fe = &this->events_[fd];
-  if (fe->mask == AE_NONE)
+  if (fe->mask == NONE)
     return;
 
   EpollDelEvent(fd, mask);
   fe->mask = fe->mask & (~mask);
-  if (fd == this->maxfd_ && fe->mask == AE_NONE) {
+  if (fd == this->maxfd_ && fe->mask == NONE) {
     /* Update the max fd */
     int j;
 
     for (j = this->maxfd_ - 1; j >= 0; j--)
-      if (this->events_[j].mask != AE_NONE)
+      if (this->events_[j].mask != NONE)
         break;
     this->maxfd_ = j;
   }
@@ -283,17 +273,7 @@ int EventLoop::DeleteTimeEvent(long long id) {
   return ST_ERROR; /* NO event with the specified ID found */
 }
 
-/* Search the first timer to fire.
- * This operation is useful to know how many time the select can be
- * put in sleep without to delay any event.
- * If there are no timers NULL is returned.
- *
- * Note that's O(N) since time events are unsorted.
- * Possible optimizations (not needed by Redis so far, but...):
- * 1) Insert the event in order, so that the nearest is just the head.
- *    Much better but still insertion or deletion of timers is O(N).
- * 2) Use a skiplist to have this operation as O(1) and insertion as O(log(N)).
- */
+// Search the first timer to fire
 TimeEvent* EventLoop::SearchNearestTimer() {
   TimeEvent *te = this->time_event_head_;
   TimeEvent *nearest = NULL;
@@ -307,7 +287,7 @@ TimeEvent* EventLoop::SearchNearestTimer() {
   return nearest;
 }
 
-/* Process time events */
+// Process time events
 int EventLoop::ProcessTimeEvents() {
   int processed = 0;
   TimeEvent *te;
@@ -362,7 +342,7 @@ int EventLoop::ProcessTimeEvents() {
        * to flag deleted elements in a special way for later
        * deletion (putting references to the nodes to delete into
        * another linked list). */
-      if (retval != AE_NOMORE) {
+      if (retval != NOMORE) {
         AddMillisecondsToNow(retval, &te->when_sec, &te->when_ms);
       } else {
         this->DeleteTimeEvent(id);
@@ -391,8 +371,8 @@ int EventLoop::ProcessTimeEvents() {
 int EventLoop::ProcessEvents(int flags) {
   int processed = 0, numevents;
 
-  /* Nothing to do? return ASAP */
-  if (!(flags & AE_TIME_EVENTS) && !(flags & AE_FILE_EVENTS))
+  // Nothing to do? return ASAP
+  if (!(flags & TIME_EVENTS) && !(flags & FILE_EVENTS))
     return 0;
 
   /* Note that we want call select() even if there are no
@@ -400,12 +380,12 @@ int EventLoop::ProcessEvents(int flags) {
    * events, in order to sleep until the next time event is ready
    * to fire. */
   if (this->maxfd_ != -1
-      || ((flags & AE_TIME_EVENTS) && !(flags & AE_DONT_WAIT))) {
+      || ((flags & TIME_EVENTS) && !(flags & DONT_WAIT))) {
     int j;
     TimeEvent *shortest = NULL;
     struct timeval tv, *tvp;
 
-    if (flags & AE_TIME_EVENTS && !(flags & AE_DONT_WAIT))
+    if (flags & TIME_EVENTS && !(flags & DONT_WAIT))
       shortest = SearchNearestTimer();
     if (shortest) {
       long now_sec, now_ms;
@@ -429,12 +409,12 @@ int EventLoop::ProcessEvents(int flags) {
       /* If we have to check for events but need to return
        * ASAP because of AE_DONT_WAIT we need to set the timeout
        * to zero */
-      if (flags & AE_DONT_WAIT) {
+      if (flags & DONT_WAIT) {
         tv.tv_sec = tv.tv_usec = 0;
         tvp = &tv;
       } else {
-        /* Otherwise we can block */
-        tvp = NULL; /* wait forever */
+        // Otherwise we can block
+        tvp = NULL; // wait forever
       }
     }
 
@@ -448,29 +428,32 @@ int EventLoop::ProcessEvents(int flags) {
       /* note the fe->mask & mask & ... code: maybe an already processed
        * event removed an element that fired and we still didn't
        * processed, so we check if the event is still valid. */
-      if (fe->mask & mask & AE_READABLE) {
+      if (fe->mask & mask & READABLE) {
         rfired = 1;
         fe->rfile_proc(this, fd, fe->client_data, mask);
       }
-      if (fe->mask & mask & AE_WRITABLE) {
+
+      //we retrieve the new pointer again in case the procedure resize the events vector
+      fe = &this->events_[this->fired_[j].fd];
+      if (fe->mask & mask & WRITABLE) {
         if (!rfired || fe->wfile_proc != fe->rfile_proc)
           fe->wfile_proc(this, fd, fe->client_data, mask);
       }
       processed++;
     }
   }
-  /* Check time events */
-  if (flags & AE_TIME_EVENTS)
+  // Check time events
+  if (flags & TIME_EVENTS)
     processed += ProcessTimeEvents();
 
-  return processed; /* return the number of processed file/time events */
+  return processed; // return the number of processed file/time events
 }
 
 void EventLoop::Start() {
   //start epoll
   this->stop_ = 0;
   while (!this->stop_) {
-    ProcessEvents(AE_ALL_EVENTS);
+    ProcessEvents(ALL_EVENTS);
   }
 }
 }  //end of namespace

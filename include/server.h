@@ -10,16 +10,12 @@
 
 #include "net.h"
 
-#define MAX_FD 1024
-
 namespace httpserver {
 class HttpServer {
  public:
-  explicit HttpServer(int port, const char* bind_addr = nullptr, int backlog = TCP_BACKLOG);
+  explicit HttpServer(int port, const string& bind_addr = "", int backlog = TCP_BACKLOG);
 
-  inline void Start() {
-    el_.Start();
-  }
+  int Start();
 
   inline void Stop() {
     el_.Stop();
