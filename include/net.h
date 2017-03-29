@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include "event.h"
+#include "settings.h"
 
 using std::string;
 using std::stringstream;
@@ -21,7 +22,6 @@ using std::stringstream;
 namespace httpserver {
 
 #define TCP_BACKLOG 511
-#define DEFAULT_RECV_SIZE 2048
 
 #define ST_SUCCESS 0
 #define ST_ERROR -1

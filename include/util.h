@@ -1,7 +1,7 @@
 /*
  * util.h
  *
- *  Created on: Mar 28, 2016
+ *  Created on: Mar 28, 2017
  *      Author: zhanghao
  */
 
@@ -11,6 +11,7 @@
 #include <vector>
 #include <sstream>
 #include <syscall.h>
+#include <unistd.h>
 
 namespace httpserver {
 long get_time();
@@ -18,6 +19,9 @@ uint64_t rdtsc();
 
 #define atomic_add(v, i) __sync_fetch_and_add((v), (i))
 #define atomic_read(v) __sync_fetch_and_add((v), (0))
+
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x)   __builtin_expect(!!(x), 0)
 
 inline int GetRandom(int min, int max) {
   static __thread unsigned int tid = (unsigned int) syscall(SYS_gettid);

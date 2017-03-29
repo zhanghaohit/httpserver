@@ -1,5 +1,12 @@
-#ifndef INCLUDE_AE_H_
-#define INCLUDE_AE_H_
+/*
+ * event.h
+ *
+ *  Created on: Mar 26, 2017
+ *      Author: zhanghao
+ */
+
+#ifndef INCLUDE_EVENT_H_
+#define INCLUDE_EVENT_H_
 
 #include <time.h>
 #include <vector>
@@ -19,7 +26,7 @@ namespace httpserver {
 
 #define NOMORE -1
 
-#define MAX_FD 1024
+#define MAX_FD 10000
 
 struct EventLoop;
 

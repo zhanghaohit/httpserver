@@ -171,10 +171,10 @@ int ClientSocket::Send(const void* buf, int size) {
 int ClientSocket::Recv(void* buf, int size) {
   int nread = read(fd_, buf, size);
   if (nread == 0) {
-    LOG(LOG_WARNING, "socket %d has been closed", fd_);
+    LOG(LOG_INFO, "socket %d has been closed", fd_);
   }
   if (nread == -1) {
-    LOG(LOG_FATAL, "read socket %d failed: %s (%d)", fd_, strerror(errno), errno);
+    LOG(LOG_INFO, "read socket %d failed: %s (%d)", fd_, strerror(errno), errno);
   }
   return nread;
 }

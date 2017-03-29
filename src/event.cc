@@ -1,3 +1,10 @@
+/*
+ * event.cc
+ *
+ *  Created on: Mar 26, 2017
+ *      Author: zhanghao
+ */
+
 #include <stdio.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -111,6 +118,7 @@ int EventLoop::EpollPoll(struct timeval *tvp) {
 EventLoop::EventLoop(int setsize) {
   int i;
 
+  setsize += 10; //in case some initial fd are in use
   this->events_.resize(setsize);
   this->fired_.resize(setsize);
   if (this->events_.size() != setsize || this->fired_.size() != setsize)
@@ -179,12 +187,12 @@ void EventLoop::Stop() {
 
 int EventLoop::CreateFileEvent(int fd, int mask, FileProc *proc,
                                    void *client_data) {
-  if (fd >= this->setsize_) {
-    if(ResizeSetSize(this->setsize_ * 2) != ST_SUCCESS) {
-      LOG(LOG_WARNING, "cannot resize the event loop");
-      return ST_ERROR;
-    }
-  }
+//  if (fd >= this->setsize_) {
+//    if(ResizeSetSize(this->setsize_ * 2) != ST_SUCCESS) {
+//      LOG(LOG_WARNING, "cannot resize the event loop");
+//      return ST_ERROR;
+//    }
+//  }
 
   if (fd >= this->setsize_) {
     errno = ERANGE;

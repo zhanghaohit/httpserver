@@ -3,11 +3,13 @@ INCLUDE = -I../include
 LIBS = -lpthread 
 #CFLAGS += -rdynamic
 
+SRCDIR = .
+
 all: server client 
 build: server client 
 
-SRC = log.cc net.cc event.cc http_request.cc server.cc util.cc resource.cc
-OBJ = log.o net.o event.o http_request.o server.o util.o resource.o
+SRC = $(shell find $(SRCDIR) -name '*.cc' ! -name 'main.cc' ! -name 'client.cc')
+OBJ = $(addprefix $(SRCDIR)/,$(SRC:%.cc=%.o))
 
 $(OBJ): %.o : %.cc
 	$(CPP) $< $(CFLAGS) $(INCLUDE) -g -c -o $@ 

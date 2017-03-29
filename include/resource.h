@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <string>
 #include <ctime>
+#include "cache.h"
+#include "settings.h"
 
 using std::string;
 using std::unordered_map;
@@ -35,6 +37,7 @@ class HttpResource {
   }
 
   //currently this function is not used as we do not support writing something in the server
+  //TODO: thread-safe
   int Put (const string& path, const void* data, int size);
 
   int Get (const string& path, void* buf, int size);
@@ -46,8 +49,10 @@ class HttpResource {
  private:
   HttpResource() {};
   static HttpResource* resource_;
-  string root_ = ".";
-  unordered_map<string, std::pair<timespec, string>> caches_;
+  string root_ = "./";
+#ifdef USE_CACHE
+  HttpCache caches_ {DEFAULT_CACHE_SIZE};
+#endif
 };
 } //end of namespace
 

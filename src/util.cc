@@ -1,7 +1,7 @@
 /*
  * util.cc
  *
- *  Created on: Mar 28, 2016
+ *  Created on: Mar 28, 2017
  *      Author: zhanghao
  */
 
@@ -29,9 +29,6 @@ void fini() {
  * return the current time in nanoseconds
  */
 long get_time() {
-//	struct timeval start;
-//	gettimeofday(&start, NULL);
-//	return start.tv_sec*1000l*1000+start.tv_usec;
   struct timespec start;
   clock_gettime(CLOCK_REALTIME, &start);
   return (start.tv_sec - init_time.tv_sec) * 1000l * 1000 * 1000

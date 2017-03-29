@@ -11,6 +11,7 @@
 #include "log.h"
 #include "http_request.h"
 #include "server.h"
+#include "util.h"
 
 using namespace httpserver;
 using std::string;
@@ -39,33 +40,72 @@ void ProcessTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 }
 
 void AcceptTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
-	ServerSocket* ss = static_cast<ServerSocket*>(data);
-	ClientSocket* cs = ss->Accept();
+	HttpServer* ser = static_cast<HttpServer*>(data);
+	ClientSocket* cs = ser->GetServreSocket().Accept();
 
 	if (!cs) {
 	  LOG(LOG_FATAL, "cannot accept client");
 	  return;
 	}
 
-	LOG(LOG_WARNING, "Accept client = %d", cs->GetFD());
+	LOG(LOG_INFO, "Accept client = %d", cs->GetFD());
 
-	if (el->CreateFileEvent(cs->GetFD(), READABLE, ProcessTcpClientHandle, cs) == ST_ERROR) {
-		LOG (LOG_FATAL, "cannot create file event");
+	//if (el->CreateFileEvent(cs->GetFD(), READABLE, ProcessTcpClientHandle, cs) == ST_ERROR) {
+	if (ser->DispatchClientSocket(cs) == ST_ERROR) {
+		LOG (LOG_FATAL, "dispatch client socket failed");
 		return;
 	}
 }
 
+void StartEventLoopThread(EventLoop* el) {
+  el->Start();
+}
+
 HttpServer::HttpServer(int port, const string& bind_addr, int backlog)
-    : ss_(port, bind_addr, backlog), el_() {}
-} //end of namespace
+    : ss_(port, bind_addr, backlog) {}
 
-int HttpServer::Start() {
+int HttpServer::Start(int threads_num) {
   int st = ss_.Listen();
+  if (st == ST_ERROR) return st;
 
-  if (el_.CreateFileEvent(ss_.GetFD(), READABLE, AcceptTcpClientHandle, &ss_) == ST_ERROR) {
+  threads_num_ = threads_num;
+  el_ = new EventLoop*[threads_num_];
+  if (threads_num_ > 1) ethreads_ = new std::thread*[threads_num_-1];
+  for (int i = 0; i < threads_num_; i++) {
+    el_[i] = new EventLoop(el_size_);
+  }
+
+  if (el_[0]->CreateFileEvent(ss_.GetFD(), READABLE, AcceptTcpClientHandle, this) == ST_ERROR) {
     LOG(LOG_FATAL, "cannot create file event");
     return ST_ERROR;
   }
-  el_.Start();
+
+  for (int i = 1; i < threads_num_; i++) {
+    ethreads_[i-1] = new std::thread(StartEventLoopThread, el_[i]);
+  }
+  el_[0]->Start();
   return st;
 }
+
+HttpServer::~HttpServer() {
+  if (el_) {
+    delete el_[0];
+    for (int i = 1; i < threads_num_; i++) {
+      delete el_[i];
+      delete ethreads_[i];
+    }
+  }
+}
+
+//TODO: load balance
+int HttpServer::DispatchClientSocket(ClientSocket* cs) {
+  int hash = cs->GetFD() % threads_num_;
+  EventLoop* el = el_[hash];
+  if (el->CreateFileEvent(cs->GetFD(), READABLE, ProcessTcpClientHandle, cs) == ST_ERROR) {
+    LOG (LOG_FATAL, "cannot create file event");
+    return ST_ERROR;
+  }
+  return ST_SUCCESS;
+}
+
+} //end of namespace
