@@ -1,6 +1,6 @@
 CPP = g++ -std=c++0x -O3
 INCLUDE = -I../include 
-LIBS = -lpthread 
+LIBS = -lpthread -lrt 
 #CFLAGS += -rdynamic
 
 SRCDIR = .

@@ -15,7 +15,7 @@ using namespace httpserver;
 
 int main (int argc, char* argv[]) {
   int port = DEFAULT_PORT;
-  int threads = 2;
+  int threads = 4;
   int elsize = 10000;
   std::string root_dir = "./";
 
