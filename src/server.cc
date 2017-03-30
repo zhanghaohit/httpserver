@@ -39,7 +39,7 @@ void ProcessTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	} else {
 	  request.Respond(cs);
 	  if (!request.KeepAlive()) {
-	    LOG(LOG_WARNING, "not keep alive, delete socket");
+	    LOG(LOG_INFO, "not keep alive, delete socket");
 	    delete cs;
 	    el->DeleteFileEvent(fd, READABLE);
 	  }

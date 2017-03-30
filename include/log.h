@@ -26,11 +26,11 @@ namespace httpserver {
 
 void _Log(char* file, char *func, int lineno, int level, const char *fmt, ...);
 
-#ifdef NDEBUG
-#define LOG(level, fmt, ...)
-#else
+//#ifdef NDEBUG
+//#define LOG(level, fmt, ...)
+//#else
 #define LOG(level, fmt, ...) _Log ((char*)__FILE__, (char*)__func__, __LINE__, level, fmt, ## __VA_ARGS__)
-#endif
+//#endif
 
 } //end of namespace
 
