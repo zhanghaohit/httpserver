@@ -27,7 +27,7 @@
      [--bind_addr (default: )]
      [--threads threads (default: 3)]
      [--connections supported_max_connections (default: 10000)]
-     [--root_dir root_dir (default: ./]
+     [--root_dir root_dir (default: ./)]
 
 #### 2) client: a simple client used to test the performance of the server
      (you can get the available options by ./client --help)
@@ -35,7 +35,7 @@
      [--ip ip_address (default: localhost)]
      [--port port (default: 12345)]
      [--connections supported_max_connections (default: 10000)]
-     [--sockets num_sockets (default: 100]
+     [--sockets num_sockets (default: 100)]
   
 #### 3) demo website
      (start the http server)
