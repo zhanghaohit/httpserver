@@ -44,3 +44,27 @@
      
      (access the website)
      open a web brower, then type the url: http://localhost:12345
+     
+ ### Some configuration on the max number of open file descriptors supported by the system
+ #### 1) System-level max number of open file descriptors
+     #The number of concurrently open file descriptors throughout the system
+     cat /proc/sys/fs/file-max
+     
+     #if it is too small, edit the /etc/sysctl.conf by adding this
+     sfs.file-max = 100000
+     #make this take effect
+     sudo sysctl -p
+#### 2) User-level FD limits
+    #check the hard limit
+    ulimit -Hn
+    #check the soft limit
+    ulimit -Sn
+    
+    #if they are too small, edit /etc/security/limits.conf by putting 
+    * soft nofile 20000
+    * hard nofile 20000
+    #to make this take effect without rebooting, edit the /etc/pam.d/common-session by adding
+    session required pam_limits.so
+    #then login by su username, it will take effect
+    su username
+     
