@@ -87,10 +87,11 @@ int main (int argc, char* argv[]) {
     } else if (strcmp(argv[i], "--connections") == 0) {
       elsize = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--help") == 0) {
-      printf("\nUsage:\n./client\n"
+      printf("Usage:\n./client\n"
+          "[--ip ip_address (default: %s)]\n"
           "[--port port (default: %d)]\n"
           "[--connections supported_max_connections (default: %d)]\n"
-          "[--sockets num_sockets (default: %d]\n", DEFAULT_PORT, elsize, num_sockets);
+          "[--sockets num_sockets (default: %d)]\n", ip.c_str(), DEFAULT_PORT, elsize, num_sockets);
       return -1;
     } else {
       fprintf(stderr, "Unrecognized option %s for benchmark\n", argv[i]);

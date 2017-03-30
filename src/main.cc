@@ -31,12 +31,12 @@ int main (int argc, char* argv[]) {
     } else if (strcmp(argv[i], "--bind_addr") == 0) {
       bind_addr = string(argv[++i]);
     } else if (strcmp(argv[i], "--help") == 0) {
-      printf("\nUsage:\n./server\n"
+      printf("Usage:\n./server\n"
           "[--port port (default: %d)]\n"
           "[--bind_addr (default: )]\n"
           "[--threads threads (default: %d)]\n"
           "[--connections supported_max_connections (default: %d)]\n"
-          "[--root_dir root_dir (default: %s]\n", port, threads, elsize, root_dir.c_str());
+          "[--root_dir root_dir (default: %s)]\n", port, threads, elsize, root_dir.c_str());
       return -1;
     } else {
       fprintf(stderr, "Unrecognized option %s for benchmark\n", argv[i]);

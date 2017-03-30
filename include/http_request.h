@@ -27,6 +27,7 @@ const string kHttpVersion = "HTTP/1.1 ";
 const string kConnection = "Connection: ";
 const string kOk = "202 OK\r\n";
 const string kNotFound = "404 Not Found\r\n";
+const string kBadRequest = "400 Bad Request\r\n";
 //const string kKeepAlive = "Connection: keep-alive\r\n";
 //const string kClosed = "Connection: closed\r\n";
 const string kContentType = "Content-Type: ";

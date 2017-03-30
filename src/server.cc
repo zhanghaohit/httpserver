@@ -37,7 +37,9 @@ void ProcessTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	  delete cs;
 	  el->DeleteFileEvent(fd, READABLE);
 	} else {
-	  request.Respond(cs);
+	  if (request.Respond(cs) != ST_SUCCESS) {
+	    LOG(LOG_WARNING, "respond to client failed");
+	  }
 	  if (!request.KeepAlive()) {
 	    LOG(LOG_INFO, "not keep alive, delete socket");
 	    delete cs;

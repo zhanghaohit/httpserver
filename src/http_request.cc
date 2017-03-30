@@ -22,7 +22,7 @@ int HttpRequest::ParseFirstLine(char* buf, int start, int end) {
   TrimSpace(buf, pos, end);
   if (unlikely(pos > end)) return ST_ERROR;
   is = ie = pos;
-  ie = FindChar(buf, is, end, ' ');
+  ie = FindCharToLower(buf, is, end, ' ');
   assert(ie > is);
   method_ = string(buf, is, ie-is);
 
@@ -35,7 +35,7 @@ int HttpRequest::ParseFirstLine(char* buf, int start, int end) {
   assert(ie > is);
   uri_ = string(buf, is, ie-is);
 
-  //uri
+  //http_version_
   pos = ie+1;
   TrimSpace(buf, pos, end);
   if (unlikely(pos > end)) return ST_ERROR;
@@ -103,6 +103,14 @@ int HttpRequest::ReadAndParse(ClientSocket* socket) {
 
 
 int HttpRequest::Respond(ClientSocket* socket) {
+  if (method_ != "get") {
+    if (unlikely(kBadRequest.length() != socket->Send(kBadRequest.c_str(), kBadRequest.length()))) {
+      return ST_ERROR;
+    }
+    LOG(LOG_WARNING, "unsupported method: %s", method_.c_str());
+    return ST_SUCCESS;
+  }
+
   char header[MAX_HEADER_SIZE];
   char sbuf[MAX_RESPONSE_SIZE];
   char* buf = sbuf;
