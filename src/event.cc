@@ -218,6 +218,8 @@ int EventLoop::ProcessEvents(int timeout) {
       }
       processed++;
     }
+  } else {
+    usleep(10000);
   }
   return processed; // return the number of processed events
 }

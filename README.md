@@ -12,6 +12,7 @@
 ### Highlights:
 + Multithreaded server
 + Epoll-based event-triggered network handling so that it can handle a huge number of cocurrent connections effeciently.
++ Less CPU consumption when idle
 
 ### Usage:
 #### 1. Compile

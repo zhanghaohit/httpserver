@@ -18,7 +18,7 @@ namespace httpserver {
 #define WRITABLE 2 //EPOLLOUT | EPOLLERR | EPOLLHUP
 #define EDEGE 4
 
-#define DEFAULT_TIMEOUT 0 //or -1
+#define DEFAULT_TIMEOUT -1 //or 0: NON_BLOCKING, -1: BLOCKING
 #define DEFAULT_MAX_FD 10000
 
 struct EventLoop;
