@@ -20,6 +20,13 @@ using std::endl;
 
 namespace httpserver {
 
+/*
+ * event handler to process request from clients
+ * el: EventLoop pointer
+ * fd: file descriptor of the ClientSocket
+ * data: ClientSocket pointer
+ * mask: READABLE / WRITABLE
+ */
 void ProcessTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	ClientSocket* cs = static_cast<ClientSocket*>(data);
 	//LOG(LOG_WARNING, "Process client = %d", cs->GetFD());
@@ -39,15 +46,20 @@ void ProcessTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	}
 }
 
+/*
+ * event handler to accept connection from clients
+ * el: EventLoop pointer
+ * fd: file descriptor of the ClientSocket
+ * data: HttpServer pointer
+ * mask: READABLE / WRITABLE
+ */
 void AcceptTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	HttpServer* ser = static_cast<HttpServer*>(data);
-	ClientSocket* cs = ser->GetServreSocket().Accept();
-
+	ClientSocket* cs = ser->GetServerSocket().Accept();
 	if (!cs) {
 	  LOG(LOG_FATAL, "cannot accept client");
 	  return;
 	}
-
 	LOG(LOG_INFO, "Accept client = %d", cs->GetFD());
 
 	//if (el->CreateFileEvent(cs->GetFD(), READABLE, ProcessTcpClientHandle, cs) == ST_ERROR) {
@@ -57,12 +69,23 @@ void AcceptTcpClientHandle (EventLoop *el, int fd, void *data, int mask) {
 	}
 }
 
+//wrapper function to facilitate to create a thread
 void StartEventLoopThread(EventLoop* el) {
   el->Start();
 }
 
 HttpServer::HttpServer(int port, const string& bind_addr, int backlog)
     : ss_(port, bind_addr, backlog) {}
+
+HttpServer::~HttpServer() {
+  if (el_) {
+    delete el_[0];
+    for (int i = 1; i < threads_num_; i++) {
+      delete el_[i];
+      delete ethreads_[i];
+    }
+  }
+}
 
 int HttpServer::Start(int threads_num) {
   int st = ss_.Listen();
@@ -85,16 +108,6 @@ int HttpServer::Start(int threads_num) {
   }
   el_[0]->Start();
   return st;
-}
-
-HttpServer::~HttpServer() {
-  if (el_) {
-    delete el_[0];
-    for (int i = 1; i < threads_num_; i++) {
-      delete el_[i];
-      delete ethreads_[i];
-    }
-  }
 }
 
 //TODO: load balance

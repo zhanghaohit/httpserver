@@ -7,17 +7,15 @@
 
 #include <cstring>
 #include "server.h"
-#include "log.h"
-#include "resource.h"
 using namespace httpserver;
 
 #define DEFAULT_PORT 12345
 
 int main (int argc, char* argv[]) {
   int port = DEFAULT_PORT;
-  int threads = 4;
-  int elsize = 10000;
-  std::string root_dir = "./";
+  int threads = 3; //number of threads used by the server
+  int elsize = 10000; //event loop size (max concurrent connections supported)
+  std::string root_dir = "./"; //root directory of the website
 
   //the first argument should be the program name
   for (int i = 1; i < argc; i++) {
@@ -40,16 +38,15 @@ int main (int argc, char* argv[]) {
     }
   }
 
-  printf("Configuration:\nport: %d, threads: %d, connections: %d, root_dir: %s\n",
+  printf("Configuration: port: %d, threads: %d, connections: %d, root_dir: %s\n",
       port, threads, elsize, root_dir.c_str());
 
-  HttpResource::Instance()->SetRootDir(root_dir);
-  HttpServer server (port);
-  server.SetEventLoopSize(elsize); //concurrent connections
+  HttpServer server (port); //create the HttpServer
+  server.SetRootDir(root_dir); //set root directory
+  server.SetEventLoopSize(elsize); //set the max concurrent connections to support
 
-  if (server.Start(threads) != ST_SUCCESS) {
-    LOG(LOG_WARNING, "start httpserver error");
+  if (server.Start(threads) != ST_SUCCESS) { //start the http server
+    printf("start httpserver error\n");
   }
   return 0;
 }
-

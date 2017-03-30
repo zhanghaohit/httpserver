@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "net.h"
 #include "resource.h"
 #include "log.h"
 #include "util.h"
@@ -47,7 +46,11 @@ int HttpResource::Get(const string& path, void* buf, int size) {
       return 0;
   }
 
-  if (S_ISDIR(st.st_mode)) { //directory (do not support list files function)
+  /*
+   * path is a directory
+   * TODO: if index.html not exists, list the files in the directory
+   */
+  if (S_ISDIR(st.st_mode)) {
     abs_path += "/index.html";
     if (stat(abs_path.c_str(), &st)) {
         LOG(LOG_WARNING, "access %s failed: %s", abs_path.c_str(), strerror(errno));
@@ -56,6 +59,11 @@ int HttpResource::Get(const string& path, void* buf, int size) {
   }
 
 #ifdef USE_CACHE
+  /*
+   * for cache.Get(), users are required to explicitly lock/unlock
+   * because we allow the users to keep the data for a while
+   * in order to avoid an extra copy
+   */
   caches_.Lock(abs_path);
   string* data = caches_.Get(abs_path, st.st_mtim);
   if (data) { //cached

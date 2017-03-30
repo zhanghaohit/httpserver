@@ -15,6 +15,9 @@ namespace httpserver {
 #include <mutex>
 #endif
 
+/*
+ * a lock wrapper which can be changed to mutex-based or atomic-based easily
+ */
 class Locker {
 #ifdef USE_ATOMIC
   bool lock_ = 0;

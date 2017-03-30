@@ -15,9 +15,12 @@
 #include "settings.h"
 
 using std::string;
-using std::unordered_map;
 
 namespace httpserver {
+
+/*
+ * used to maintain the website resources (i.e., files, http caches)
+ */
 class HttpResource {
  public:
 
@@ -36,22 +39,32 @@ class HttpResource {
     return root_;
   }
 
-  //currently this function is not used as we do not support writing something in the server
-  //TODO: thread-safe
-  int Put (const string& path, const void* data, int size);
+  /*
+   * put a new file to the directory
+   * currently this function is not used as we do not support writing something in the server
+   * TODO: thread-safe
+   */
+  int Put(const string& path, const void* data, int size);
 
-  int Get (const string& path, void* buf, int size);
-  string Get (const string& path);
+  /*
+   * read the data from path and put it in the buffer
+   * @path: the file location
+   * @buf: user-provied buffer
+   * @size: max size
+   * return: the file size
+   */
+  int Get(const string& path, void* buf, int size);
 
+  //disable copy constructor
   HttpResource(const HttpResource&) = delete;
   void operator=(const HttpResource&) = delete;
 
  private:
   HttpResource() {};
-  static HttpResource* resource_;
+  static HttpResource* resource_; //singleton instance
   string root_ = "./";
 #ifdef USE_CACHE
-  HttpCache caches_ {DEFAULT_CACHE_SIZE};
+  HttpCache caches_ {DEFAULT_CACHE_SIZE}; //caches used to cache some recently accessed files
 #endif
 };
 } //end of namespace

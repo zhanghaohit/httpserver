@@ -29,6 +29,7 @@ string* HttpCache::Get(const string& path, const timespec& nt) {
   size_t hash = hasher_(path) % size_;
 
   if (entries_[hash]) {
+    if(entries_[hash]->path != path) return nullptr;
     if (entries_[hash]->time < nt) {
       return nullptr;
     } else {

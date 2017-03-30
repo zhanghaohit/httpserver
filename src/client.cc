@@ -20,9 +20,9 @@ using std::cout;
 using std::endl;
 using std::atomic;
 
-#define SOCKETS_PER_THREAD 100
 #define DEFAULT_PORT 12345
 
+//mock request to send
 const string kToSend = " GET  /index.html  HTTP/1.1\r\n"
   " Host:  localhost:12345\r\n"
     "User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:44.0) Gecko/20100101 Firefox/44.0\r\n"
@@ -31,9 +31,12 @@ const string kToSend = " GET  /index.html  HTTP/1.1\r\n"
     "Accept-Encoding: gzip, deflate\r\n"
     "Connection: keep-alive\r\n";
 
-atomic<unsigned long> sent (0);
 atomic<unsigned long> recved (0);
 
+/*
+ * event handler when received response from the server
+ * strategy: send 1 request, wait till received the response, then send another request
+ */
 void request(EventLoop *el, int fd, void *data, int mask) {
   ClientSocket* cs = static_cast<ClientSocket*>(data);
   string r = cs->Recv();
@@ -47,33 +50,31 @@ void request(EventLoop *el, int fd, void *data, int mask) {
   if(kToSend.length() != cs->Send(kToSend.c_str(), kToSend.length())) {
     LOG(LOG_WARNING, "request failed");
   }
-  sent++;
 }
 
+//print the throughput statistics every second
 void print_stats() {
   while (true) {
     long start = get_time();
-    unsigned long s1 = sent;
     unsigned long r1 = recved;
     sleep(1);
-    unsigned long s2 = sent;
     unsigned long r2 = recved;
     long end = get_time();
     double duration = (end - start) * 1.0 / 1000 / 1000 / 1000;
-    LOG(LOG_WARNING, "throughput:\nsend: %lf ops/s, receive: %lf ops/s",
-        (s2 - s1) / duration, (r2 - r1) / duration);
+    printf("throughput: %lf ops/s\n", (r2 - r1) / duration);
   }
 }
 
+//wrapper function to start the eventloop
 void start_client (EventLoop* el) {
   el->Start();
 }
 
 int main (int argc, char* argv[]) {
-  int num_sockets = 100;
+  int num_sockets = 100; //number of sockets the clients are using
   int port = DEFAULT_PORT;
   string ip = "localhost";
-  int elsize = 10000;
+  int elsize = 10000; //event loop size (max concurrent connections supported)
 
   //the first argument should be the program name
   for (int i = 1; i < argc; i++) {
@@ -95,11 +96,11 @@ int main (int argc, char* argv[]) {
       fprintf(stderr, "Unrecognized option %s for benchmark\n", argv[i]);
     }
   }
+  printf("Configuration: ip = %s, port: %d, num_sockets = %d\n", ip.c_str(), port, num_sockets);
 
-  LOG(LOG_WARNING, "ip = %s, port: %d, num_sockets = %d", ip.c_str(), port, num_sockets);
+  EventLoop* el = new EventLoop(elsize); //create the eventloop
 
-  EventLoop* el = new EventLoop(10000);
-
+  //create and connect the client sockets
   ClientSocket* cs[num_sockets];
   for (int i = 0; i < num_sockets; i++) {
     cs[i] = new ClientSocket(ip, port);
@@ -107,22 +108,22 @@ int main (int argc, char* argv[]) {
       LOG(LOG_WARNING, "cannot connect to the server");
       return -1;
     } else {
-      el->CreateFileEvent(cs[i]->GetFD(), READABLE, request, cs[i]);
+      el->CreateFileEvent(cs[i]->GetFD(), READABLE, request, cs[i]); //register the event handler when receiving data
     }
   }
 
   std::thread client_thread (start_client, el); //start the client thread
+  std::thread t (print_stats); //start the statistics printing thread
 
-  for (int i = 0; i < num_sockets; i++) { //send initial requests
+  //send initial requests, then the requesting loop will start
+  for (int i = 0; i < num_sockets; i++) {
     if(kToSend.length() != cs[i]->Send(kToSend.c_str(), kToSend.length())) {
       LOG(LOG_WARNING, "request failed");
     }
-    sent++;
   }
 
-  std::thread t (print_stats);
-
   client_thread.join();
+  t.join();
 	return 0;
 }
 

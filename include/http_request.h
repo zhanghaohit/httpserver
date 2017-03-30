@@ -32,31 +32,69 @@ const string kNotFound = "404 Not Found\r\n";
 const string kContentType = "Content-Type: ";
 const string kOtherHeaders = "Connection: keep-alive\r\nServer: Simple Http Server\r\n";
 
-
+/*
+ * used to parse the http request and prepare the response
+ */
 class HttpRequest {
  public:
   HttpRequest() {}
 
+  //parse the data read from socket to fill the necessary header fields in this object
   int ReadAndParse(ClientSocket* socket);
+
+  /*
+   * based on the header fields
+   * get the required resource and respond to the client
+   */
   int Respond(ClientSocket* socket);
 
+  //whether or not close the socket
   inline bool KeepAlive() { return keep_alive_; }
 
  private:
-  int ProcessFirstLine(char* buf, int start, int end); //line: buf[start, end] excluding \r\n
-  int ProcessOneLine(char* buf, int start, int end); //line: buf[start, end] excluding \r\n
+  /*
+   * parse the first line of the header
+   * e.g., Get / HTTP/1.1
+   * line: buf[start, end] excluding \r\n
+   */
+  int ParseFirstLine(char* buf, int start, int end);
+
+  /*
+   * parse the one line of the header (except the first line)
+   * e.g., Connection: keep-alive
+   * line: buf[start, end] excluding \r\n
+   */
+  int ParseOneLine(char* buf, int start, int end); //line: buf[start, end] excluding \r\n
+
+  /*
+   * trim the whitespace character in buf[start, end]
+   * from buf[start] onwards and move the start position
+   */
   inline void TrimSpace(const char* buf, int& start, int end) {
     while (start <= end && buf[start] == ' ') start++;
   }
 
+  /*
+   * trim the special character (e.g., \r, \n, ' ') in buf[start, end]
+   * from buf[start] onwards and move the start position
+   */
   inline void TrimSpecial(const char* buf, int& start, int end) {
     while (start <= end && (buf[start] == ' ' || buf[start] == '\n' || buf[start] == '\r')) start++;
   }
 
+  /*
+   * trim the special character (e.g., \r, \n, ' ') in buf[start, end]
+   * from buf[end] backwards and move the end position
+   */
   inline void TrimSpecialReverse(const char* buf, int& end, int start) {
     while (end >= start && (buf[end] == ' ' || buf[end] == '\n' || buf[end] == '\r')) end--;
   }
 
+  /*
+   * return the first position where it is character c
+   * within buf[start, end]
+   * if not found, return end+1
+   */
   inline int FindChar(const char* buf, int start, int end, char c) { //find within [start, end]
     while (start <= end) {
       if (buf[start] == c) break;
@@ -65,8 +103,11 @@ class HttpRequest {
     return start;
   }
 
-  //find the position of the specified character, and tolower the character before this character
-  inline int FindCharToLower(char* buf, int start, int end, char c) { //find within [start, end]
+  /*
+   * find the position of the specified character within [start, end]
+   * and tolower the character before this character
+   */
+  inline int FindCharToLower(char* buf, int start, int end, char c) {
     while (start <= end) {
       if (buf[start] == c) {
         break;
@@ -81,14 +122,10 @@ class HttpRequest {
   string method_;
   string uri_;
   string http_version_;
-
   bool keep_alive_ = false;
   unordered_map<string, string> headers_;
 
-  /* status_: used to transmit server's error status, such as
-     202 OK
-     404 Not Found
-     and so on */
+  //status_: e.g. 202 OK, 404 Not Found
   string status_ = kOk;
 };
 }  //end of namespace

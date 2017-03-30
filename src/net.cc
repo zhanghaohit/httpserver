@@ -16,8 +16,6 @@
 #include "log.h"
 
 namespace httpserver {
-ServerSocket::ServerSocket(int port, const string& bind_addr, int backlog)
-    : Socket(bind_addr, port), backlog_(backlog) {}
 
 int ServerSocket::Listen() {
   int rv;
@@ -100,8 +98,6 @@ ClientSocket* ServerSocket::Accept() {
 	return new ClientSocket (string(cip), cport, cfd);
 }
 
-ClientSocket::ClientSocket(const string& ip, int port): Socket(ip, port) {}
-
 int ClientSocket::Connect() {
   int rv;
   char portstr[6]; // strlen("65535") + 1;
@@ -125,7 +121,7 @@ int ClientSocket::Connect() {
 
     if (connect(fd_, p->ai_addr, p->ai_addrlen) == -1) {
       /* If the socket is non-blocking, it is ok for connect() to
-       * return an EINPROGRESS error here. */
+       * return an ST_INPROCESS error here. */
       LOG(LOG_WARNING, "failed to connect");
       if (errno == EINPROGRESS) {
         freeaddrinfo(servinfo);

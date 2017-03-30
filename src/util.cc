@@ -5,12 +5,6 @@
  *      Author: zhanghao
  */
 
-#include <sstream>
-#include <cstring>
-#include <cstdlib>
-#include <stdio.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
 #include "util.h"
 
 namespace httpserver {
@@ -21,8 +15,7 @@ void init() {
   clock_gettime(CLOCK_REALTIME, &init_time);
 }
 
-void fini() {
-}
+void fini() {}
 
 /*
  * initial time that is used to avoid long overflow
@@ -33,13 +26,6 @@ long get_time() {
   clock_gettime(CLOCK_REALTIME, &start);
   return (start.tv_sec - init_time.tv_sec) * 1000l * 1000 * 1000
       + (start.tv_nsec - init_time.tv_nsec);;
-}
-
-
-uint64_t rdtsc() {
-  unsigned int lo, hi;
-  __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-  return ((uint64_t) hi << 32) | lo;
 }
 } //end of namespace
 

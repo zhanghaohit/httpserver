@@ -1,7 +1,7 @@
 CPP = g++ -std=c++0x -O3
 INCLUDE = -I../include 
 LIBS = -lpthread -lrt 
-#CFLAGS += -rdynamic
+CFLAGS += -DNDEBUG
 
 SRCDIR = .
 
